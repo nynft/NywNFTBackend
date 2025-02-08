@@ -6,6 +6,7 @@ const helmet = require("helmet");
 const cors = require("cors");
 const morgan = require("morgan");
 const { default: mongoose } = require("mongoose");
+const userRoute = require("./routes/user");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -17,6 +18,8 @@ mongoose
   .connect(process.env.MONGO_URL)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.log(err));
+
+app.use("/api/user", userRoute);
 
 app.listen(PORT, () => {
   console.log(`Backend is running on port http://localhost:${PORT}`);
