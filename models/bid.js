@@ -29,7 +29,7 @@ const bidSchema = new mongoose.Schema(
     },
     onBId: {
       type: Boolean,
-      default: falses,
+      default: false,
     },
     createdAt: {
       type: Date,

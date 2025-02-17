@@ -7,6 +7,9 @@ const cors = require("cors");
 const morgan = require("morgan");
 const { default: mongoose } = require("mongoose");
 const userRoute = require("./routes/user");
+const sellRoute = require("./routes/sell");
+const categoryRoute = require('./routes/category');
+const collectionRoutes = require('./routes/collection');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -20,6 +23,9 @@ mongoose
   .catch((err) => console.log(err));
 
 app.use("/api/user", userRoute);
+app.use("/api/sell", sellRoute);
+app.use('/api/category', categoryRoute);
+app.use('/api/collection', collectionRoutes);
 
 app.listen(PORT, () => {
   console.log(`Backend is running on port http://localhost:${PORT}`);

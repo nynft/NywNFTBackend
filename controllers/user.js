@@ -1,6 +1,6 @@
-const { User, UserToken } = require("../models/user");
-const jwt = require("jsonwebtoken");
+const { User } = require("../models/user");
 const { Magic } = require("@magic-sdk/admin");
+const { createToken } = require("../services/tokenServices");
 const magic = new Magic(process.env.MAGIC_SECRET_KEY);
 require("dotenv").config();
 
@@ -45,18 +45,36 @@ const verifyMagicLogin = async (req, res) => {
       await user.save();
     }
 
-    // Generate JWT token for authentication
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, verified: user.verified },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-    await UserToken.create({ userId: user.userId, token, expiresIn: token.expiresIn });
 
-    return res.json({ success: true, token, user });
+    const userPayload = {
+      userId: user.userId,
+      username: metadata.email.split("@")[0],
+      email: metadata.email,
+      walletAddress: metadata.publicAddress?.toLocaleLowerCase() || "",
+    };
+
+    const verification = await createToken(req, res, userPayload);
+
+    if (verification.isVerified) {
+      return res.status(200).json({
+        status: true,
+        message: 'Login successful',
+        data: {
+          userId: user.userId,
+          username: metadata.email.split("@")[0],
+          email: metadata.email,
+          walletAddress: metadata.publicAddress?.toLocaleLowerCase() || "",
+          active: 1,
+          token: verification.token,
+        },
+        // token: verification.token,
+      });
+    } else {
+      return res.status(401).json({ status: false, message: 'Unauthorized user!' });
+    }
   } catch (error) {
     console.error("Magic Link Verification Error:", error);
-    return res.status(500).json({ success: false, message: "Magic Login Failed" });
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
@@ -79,32 +97,49 @@ const userProfile = async (req, res) => {
   }
 };
 
-const registerWithWallet = async (req, res) => {
+const loginWithWallet = async (req, res) => {
   try {
     const { walletAddress } = req.body;
     if (!walletAddress) {
       return res.status(400).json({ success: false, message: "Wallet address is required." });
     }
-    const user = await User.findOne({ walletAddress });
-    if (user) {
-      return res.status(400).json({ success: false, message: "Wallet address already exists." });
+
+    // Check if the user already exists
+    let user = await User.findOne({ walletAddress: walletAddress.toLowerCase() });
+
+    if (!user) {
+      // If the user does not exist, create a new user
+      const countUser = await User.countDocuments();
+      const userId = countUser + 1;
+      const isVerified = countUser < 1000;
+
+      user = await User.create({
+        userId,
+        walletAddress: walletAddress.toLowerCase(),
+        verified: isVerified,
+      });
     }
-    const countUser = await User.countDocuments();
-    const isVerified = countUser < 1000;
-    const userCreated = await User.create({
-      userId: countUser + 1,
-      username: "",
-      email: "",
-      walletAddress: walletAddress,
-      verified: isVerified,
-    });
-    await userCreated.save();
 
-    return res.status(201).json({ success: true, user: userCreated });
+    // Generate a token for the user (new or existing)
+    const verification = await createToken(req, res, user);
+
+    if (verification.isVerified) {
+      return res.status(200).json({
+        status: true,
+        message: 'Login successful',
+        data: {
+          userId: user.userId,
+          walletAddress: user.walletAddress,
+          active: 1,
+          token: verification.token,
+        },
+      });
+    } else {
+      return res.status(401).json({ status: false, message: 'Unauthorized user!' });
+    }
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ error: "Logout failed" });
+    console.error("Error in loginWithWallet:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
-}
-
-module.exports = { verifyMagicLogin, logout, userProfile };
+};
+module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet };
