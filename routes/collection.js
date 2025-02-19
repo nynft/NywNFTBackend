@@ -6,7 +6,7 @@ const { createCollection, getAllUserCollection, checkUniqueCollectionName, colle
 
 router.post('/create', uploadCollectionFields, createCollection);
 router.get('/all', getAllUserCollection);
-router.get('/checkUniqueName', checkUniqueCollectionName);
+router.post('/checkUniqueName', checkUniqueCollectionName);
 router.get('/get/:collectionId', collectionByUserId);
 
 

@@ -12,6 +12,7 @@ const verifyMagicLogin = async (req, res) => {
     if (!didToken) {
       return res.status(400).json({ success: false, message: "DID Token is required." });
     }
+    console.log(didToken, "token");
 
     // Verify the Magic token
     const metadata = await magic.users.getMetadataByToken(didToken);
