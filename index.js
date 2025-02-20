@@ -10,6 +10,7 @@ const userRoute = require("./routes/user");
 const sellRoute = require("./routes/sell");
 const categoryRoute = require('./routes/category');
 const collectionRoutes = require('./routes/collection');
+const buyRoute = require('./routes/buying');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -26,6 +27,7 @@ app.use("/api/user", userRoute);
 app.use("/api/sell", sellRoute);
 app.use('/api/category', categoryRoute);
 app.use('/api/collection', collectionRoutes);
+app.use('/api/buy', buyRoute);
 
 app.listen(PORT, () => {
   console.log(`Backend is running on port http://localhost:${PORT}`);

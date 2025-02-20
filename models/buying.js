@@ -5,10 +5,11 @@ const buyItem = new mongoose.Schema({
   tokenId: { type: Number },
   amount: { type: Number, required: true },
   contractAddress: { type: String, required: true },
-  transactioHash: { type: String, required: true },
-  nftStandard: { type: String, enum: ["ERC-721", "ERC-1155"], required: true },
-
-}, { versionKey: false, timestamps: true });
+  transactionHash: { type: String, required: true },
+  // nftStandard: { type: String, enum: ["ERC-721", "ERC-1155"], required: true },
+  onSale: { type: Boolean, default: false },
+  buyDate: { type: Date, default: Date.now },
+}, { versionKey: false });
 
 const BuyItem = mongoose.model('BuyItem', buyItem);
 module.exports = BuyItem;
