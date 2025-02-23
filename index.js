@@ -7,10 +7,11 @@ const cors = require("cors");
 const morgan = require("morgan");
 const { default: mongoose } = require("mongoose");
 const userRoute = require("./routes/user");
-const sellRoute = require("./routes/sell");
+const cartRoutes = require("./routes/cart");
 const categoryRoute = require('./routes/category');
 const collectionRoutes = require('./routes/collection');
-const buyRoute = require('./routes/buying');
+const bidRoutes = require('./routes/bid');
+const nftRoutes = require('./routes/nft');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -24,10 +25,11 @@ mongoose
   .catch((err) => console.log(err));
 
 app.use("/api/user", userRoute);
-app.use("/api/sell", sellRoute);
+app.use("/api/cart", cartRoutes);
 app.use('/api/category', categoryRoute);
 app.use('/api/collection', collectionRoutes);
-app.use('/api/buy', buyRoute);
+app.use('/api/bid', bidRoutes);
+app.use('/api/nft', nftRoutes);
 
 app.listen(PORT, () => {
   console.log(`Backend is running on port http://localhost:${PORT}`);
