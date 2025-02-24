@@ -20,17 +20,22 @@
   },
   "dependencies": {
     "@magic-sdk/admin": "^2.4.1",
+    "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "form-data": "^4.0.2",
     "helmet": "^8.0.0",
     "ipfs-http-client": "^56.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mime-types": "^2.1.35",
     "mongoose": "^8.9.6",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "nft.storage": "^7.2.0",
     "nodemon": "^3.1.9",
-    "passport": "^0.7.0"
+    "passport": "^0.7.0",
+    "pinata-web3": "^0.5.4"
   }
 }

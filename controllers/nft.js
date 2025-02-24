@@ -2,12 +2,12 @@ const Collection = require('../models/collection');
 const NFT = require('../models/nft');
 const { verifyToken } = require('../services/tokenServices');
 const BuyingHistory = require('../models/buyhistory');
-const fs = require('fs');
-const ipfs = require('../services/infuraServices');
 require('dotenv').config();
+const { pinata } = require('../services/pinataServices');
+const fs = require('fs');
 
 
-// Create a new NFT
+// // Create a new NFT
 const createNFT = async (req, res) => {
     try {
         const verification = await verifyToken(req, res);
@@ -29,12 +29,6 @@ const createNFT = async (req, res) => {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
 
-        // const checkTokenId = await NFT.findOne({ tokenId });
-        // if (checkTokenId) {
-        //     return res.status(400).json({ status: false, message: "Token Id already exists" });
-        // }
-
-        // Check if collection exists
         const findCollection = await Collection.findOne({ collectionId: collectionId });
         if (!findCollection) {
             return res.status(404).json({ status: false, message: "Collection not found" });
@@ -58,24 +52,42 @@ const createNFT = async (req, res) => {
             transactionHash,
         }
 
+        // Upload image to Pinata
+        const fileData = fs.readFileSync(files[0].path);
+        const fileBlob = new Blob([fileData], { type: files[0].mimetype || 'application/octet-stream' });
 
-        // const imageBuffer = await fs.promises.readFile(files[0].path);
-        // console.log(imageBuffer.length, "imageBuffer");
+        const imageResult = await pinata.upload.file(fileBlob, {
+            metadata: {
+                name: `${name}-image`
+            }
+        });
 
-        // // Upload metadata and image to IPFS
-        // const imageResult = await ipfs.add(imageBuffer, { wrapWithDirectory: false });
-        // console.log(imageResult, "imageResult");
+        if (!imageResult?.IpfsHash) {
+            throw new Error('Failed to get CID from image upload');
+        }
+        metadata.image = `ipfs://${imageResult.IpfsHash}`;
 
-        // // Store the image CID in the metadata
-        // metadata.image = `ipfs://${imageResult[0].hash}`;
+        // Upload metadata to Pinata
 
-        // const metadataResult = await ipfs.add(Buffer.from(JSON.stringify(metadata)));
-        // console.log(metadataResult, "metadataResult");
+        const metadataResult = await pinata.upload.json(metadata, {
+            metadata: {
+                name: `${name}-metadata`
+            }
+        });
+
+        if (!metadataResult?.IpfsHash) {
+            throw new Error('Failed to get CID from metadata upload');
+        }
+
+        // Create gateway URLs
+        const pinataGateway = process.env.PINATA_GATEWAY;
+        if (!pinataGateway) {
+            throw new Error('PINATA_GATEWAY is not defined in environment variables');
+        }
 
 
-        // // Create gateway URLs for metadata and image
-        // const metadataGatewayURL = `${process.env.INFURA_IPFS_ENDPOINT}/ipfs/${metadataResult[0].hash}`;
-        // const imageGatewayURL = `${process.env.INFURA_IPFS_ENDPOINT}/ipfs/${imageResult[0].hash}`;
+        const metadataGatewayURL = `${pinataGateway}/ipfs/${metadataResult.IpfsHash}`;
+        const imageGatewayURL = `${pinataGateway}/ipfs/${imageResult.IpfsHash}`;
 
         const nft = new NFT({
             tokenId: id,
@@ -88,8 +100,8 @@ const createNFT = async (req, res) => {
             contractAddress,
             // seller: walletAddress,
             imageUrl: imageUrl, // Include image URLs here
-            // metadataURL: metadataGatewayURL,
-            // ipfsImageUrl: imageGatewayURL,
+            metadataURL: metadataGatewayURL,
+            ipfsImageUrl: imageGatewayURL,
 
         });
 

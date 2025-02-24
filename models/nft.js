@@ -16,6 +16,8 @@ const nftSchema = new mongoose.Schema({
     isForSale: { type: Boolean, default: false },
     buyDate: { type: Date },
     sellExpiry: { type: Date },
+    metadataURL: { type: String },
+    ipfsImageUrl: { type: String },
 }, { versionKey: false });
 
 const NFT = mongoose.model('NFT', nftSchema);
