@@ -31,6 +31,22 @@ app.use('/api/collection', collectionRoutes);
 app.use('/api/bid', bidRoutes);
 app.use('/api/nft', nftRoutes);
 
+
+app.get("/api/image", (req, res) => {
+  try {
+    let imageName = req.query.imageName;
+    let pathName = req.query.pathName;
+
+    // Use root directory from environment variable
+    const rootDir = process.env[pathName];
+
+    // console.log(rootDir, "image");
+    res.sendFile(imageName, { root: rootDir });
+  } catch (error) {
+    console.log(error);
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Backend is running on port http://localhost:${PORT}`);
 });
