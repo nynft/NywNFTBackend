@@ -2,7 +2,8 @@
 const Category = require('../models/category');
 const Collection = require('../models/collection');
 const { verifyToken } = require('../services/tokenServices');
-const { removeUnwantedCollectionImg } = require('../utils/removeImages')
+const { removeUnwantedCollectionImg } = require('../utils/removeImages');
+const { cloudinary, uploadToCloudinary } = require('../services/cloudinaryServices');
 
 
 // create collection for user
@@ -40,6 +41,10 @@ const createCollection = async (req, res) => {
             return res.status(400).json({ status: false, message: "Category does not exist" });
         }
 
+        // **Upload Images to Cloudinary**
+        const logoImageResult = await uploadToCloudinary(field1[0].buffer);
+        const bannerImageResult = await uploadToCloudinary(field2[0].buffer);
+
         const collectionCount = await Collection.countDocuments();
         const id = parseInt(collectionCount) + 1;
         let obj = {
@@ -48,8 +53,8 @@ const createCollection = async (req, res) => {
             collectionSymbol,
             categoryId,
             categoryName: category.name,
-            logoImage: field1[0].filename,
-            bannerImage: field2[0].filename,
+            logoImage: logoImageResult.secure_url,
+            bannerImage: bannerImageResult.secure_url,
             creatorWallerAddress: verification.data.data.walletAddress,
             contractAddress,
             royalty,

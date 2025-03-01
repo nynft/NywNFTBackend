@@ -9,6 +9,11 @@ const createCategory = async (req, res) => {
         if (!name) {
             return res.status(400).json({ status: false, message: "Name is required" });
         }
+        const categoryExist = await Category.findOne({ name });
+        if (categoryExist) {
+            return res.status(400).json({ status: false, message: "Category already exist" });
+        }
+
         const count = await Category.countDocuments();
         const category = new Category({
             categoryId: count + 1,

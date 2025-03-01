@@ -1,8 +1,9 @@
-const { User } = require("../models/user");
+const { User, UserToken } = require("../models/user");
 const { Magic } = require("@magic-sdk/admin");
 const { createToken } = require("../services/tokenServices");
 const magic = new Magic(process.env.MAGIC_SECRET_KEY);
 require("dotenv").config();
+const { verifyToken } = require("../services/tokenServices");
 
 // Magic Link Login
 
@@ -90,9 +91,19 @@ const logout = async (req, res) => {
   }
 };
 
+
 const userProfile = async (req, res) => {
   try {
-    return res.status(200).json({ status: true, message: "User profile", data: req.user })
+    const verification = await verifyToken(req, res);
+
+    if (!verification.isVerified) {
+      return res.status(401).json({ status: false, message: verification.message });
+    }
+    return res.status(200).json({
+      status: true,
+      message: "User profile fetched successfully",
+      data: verification.data.data,
+    });
   } catch (error) {
     return res.status(500).json({ error: "Logout failed" });
   }
@@ -143,4 +154,21 @@ const loginWithWallet = async (req, res) => {
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet };
+
+const logoutUser = async (req, res) => {
+  try {
+    const verification = await verifyToken(req, res);
+    if (!verification.isVerified) {
+      return res.status(401).json({ status: false, message: verification.message });
+    }
+    const token = verification.token;
+    await UserToken.findOneAndUpdate({ token: token }, { $set: { active: 0 } });
+    return res.status(200).json({ message: "User logged out successfully" });
+
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+
+module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser };
