@@ -47,6 +47,10 @@ app.get("/api/image", (req, res) => {
   }
 });
 
+app.get('/', (req, res) => {
+  res.send(`<h1>Welcome to NFT API</h1>`);
+})
+
 app.listen(PORT, () => {
   console.log(`Backend is running on port http://localhost:${PORT}`);
 });
