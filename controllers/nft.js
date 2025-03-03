@@ -31,11 +31,15 @@ const createNFT = async (req, res) => {
         // console.log(imageUrl, "image url");
 
 
-        const { name, description, collectionId, contractAddress, transactionHash } = req.body;
-        if (!(name && description && collectionId && contractAddress && transactionHash)) {
+        const { name, description, collectionId, contractAddress, transactionHash, tokenId, royalty } = req.body;
+        if (!(name && description && collectionId && contractAddress && transactionHash && tokenId)) {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
 
+        const checkToken = await NFT.findOne({ tokenId });
+        if (checkToken) {
+            return res.status(400).json({ status: false, message: "Token already exists" });
+        }
         const findCollection = await Collection.findOne({ collectionId });
         if (!findCollection) {
             return res.status(404).json({ status: false, message: "Collection not found" });
@@ -45,13 +49,16 @@ const createNFT = async (req, res) => {
         if (checkTrx) {
             return res.status(400).json({ status: false, message: "Transaction hash already exists" });
         }
+        if (royalty.percentage > 10) {
+            return res.status(400).json({ status: false, message: "Royalty percentage cannot more than 10" })
+        }
 
         // Generate tokenId
         const sellCount = await NFT.countDocuments();
         const id = sellCount + 1;
 
         const metadata = {
-            tokenId: id,
+            tokenId: tokenId,
             name,
             description,
             collectionName: findCollection.collectionName,
@@ -109,12 +116,13 @@ const createNFT = async (req, res) => {
 
         // Save NFT to DB
         const nft = new NFT({
-            tokenId: id,
+            tokenId: tokenId,
             collectionId,
             walletAddress,
             name,
             description,
             collectionName: findCollection.collectionName,
+            royalty,
             transactionHash,
             contractAddress,
             imageUrl, // Cloudinary URL

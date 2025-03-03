@@ -11,10 +11,6 @@ const collectionSchema = new mongoose.Schema(
     logoImage: { type: String, default: "" },
     bannerImage: { type: String, default: "" },
     contractAddress: { type: String, required: true },
-    royalty: {
-      percentage: { type: Number, min: 0, max: 10 },
-      recipient: { type: String }, // Wallet address receiving royalties
-    },
     description: { type: String, maxlength: 300 },
     collectionCreationHash: { type: String, require: true },
     nftStandard: { type: String, enum: ["ERC-721", "ERC-1155"], required: true },

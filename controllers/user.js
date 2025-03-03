@@ -4,6 +4,8 @@ const { createToken } = require("../services/tokenServices");
 const magic = new Magic(process.env.MAGIC_SECRET_KEY);
 require("dotenv").config();
 const { verifyToken } = require("../services/tokenServices");
+const NFT = require('../models/nft');
+const Collection = require('../models/collection');
 
 // Magic Link Login
 
@@ -171,4 +173,27 @@ const logoutUser = async (req, res) => {
   }
 }
 
-module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser };
+
+const getUserProfileAssets = async (req, res) => {
+  try {
+    const verification = await verifyToken(req, res);
+    if (!verification.isVerified) {
+      return res.status(401).json({ status: false, message: verification.message });
+    }
+    let walletAddress = verification.data.data.walletAddress;
+    const userData = await User.findOne({ walletAddress: walletAddress })
+    if (!userData) {
+      return res.status(404).json({ status: false, message: "User not found" })
+    }
+    const nft = await NFT.find({ walletAddress });
+    const collection = await Collection.find({ creatorWallerAddress: walletAddress });
+
+    let allData = [...nft, ...collection]
+    return res.status(200).json({ status: true, message: "Get user profile assets successfully", data: allData })
+
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser, getUserProfileAssets };

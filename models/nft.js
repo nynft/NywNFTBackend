@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const nftSchema = new mongoose.Schema({
-    tokenId: { type: Number },
+    tokenId: { type: Number, required: true },
     name: { type: String, required: true },
     description: { type: String, required: true },
     imageUrl: { type: String, required: true },
@@ -12,6 +12,10 @@ const nftSchema = new mongoose.Schema({
     transactionHash: { type: String, required: true },
     buyerAddress: { type: String },
     price: { type: Number },
+    royalty: {
+        percentage: { type: Number, min: 0, max: 10 },
+        recipient: { type: String }, // Wallet address receiving royalties
+    },
     isMinted: { type: Boolean, default: false },
     isForSale: { type: Boolean, default: false },
     buyDate: { type: Date },

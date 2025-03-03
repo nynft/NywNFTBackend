@@ -57,7 +57,7 @@ const createCollection = async (req, res) => {
             bannerImage: bannerImageResult.secure_url,
             creatorWallerAddress: verification.data.data.walletAddress,
             contractAddress,
-            royalty,
+            // royalty,
             description,
             collectionCreationHash,
             nftStandard,
