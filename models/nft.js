@@ -7,6 +7,8 @@ const nftSchema = new mongoose.Schema({
     imageUrl: { type: String, required: true },
     walletAddress: { type: String },
     collectionId: { type: Number, required: true },
+    categoryId: { type: Number, required: true },
+    categoryName: { type: String },
     collectionName: { type: String },
     contractAddress: { type: String, required: true },
     transactionHash: { type: String, required: true },

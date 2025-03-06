@@ -6,6 +6,7 @@ require('dotenv').config();
 const { pinata } = require('../services/pinataServices');
 const { uploadToCloudinary } = require('../services/cloudinaryServices');
 const { Blob } = require('buffer');
+const Category = require('../models/category');
 
 
 // // Create a new NFT
@@ -31,7 +32,7 @@ const createNFT = async (req, res) => {
         // console.log(imageUrl, "image url");
 
 
-        const { name, description, collectionId, contractAddress, transactionHash, tokenId, royalty } = req.body;
+        const { name, description, collectionId, contractAddress, categoryId, transactionHash, tokenId, royalty } = req.body;
         if (!(name && description && collectionId && contractAddress && transactionHash && tokenId)) {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
@@ -45,6 +46,10 @@ const createNFT = async (req, res) => {
             return res.status(404).json({ status: false, message: "Collection not found" });
         }
 
+        const category = await Category.findOne({ categoryId });
+        if (!category) {
+            return res.status(400).json({ status: false, message: "Category does not exist" });
+        }
         const checkTrx = await NFT.findOne({ transactionHash });
         if (checkTrx) {
             return res.status(400).json({ status: false, message: "Transaction hash already exists" });
@@ -63,6 +68,7 @@ const createNFT = async (req, res) => {
             description,
             collectionName: findCollection.collectionName,
             contractAddress,
+            category: category.name,
             transactionHash,
         };
 
@@ -123,6 +129,8 @@ const createNFT = async (req, res) => {
             description,
             collectionName: findCollection.collectionName,
             royalty,
+            categoryId,
+            categoryName: category.name,
             transactionHash,
             contractAddress,
             imageUrl, // Cloudinary URL
