@@ -2,53 +2,18 @@ const multer = require('multer');
 
 const storage = multer.memoryStorage();
 
-// const storageCollection = multer.diskStorage({
-//     destination: (req, file, callback) => {
-//         const path = process.env.NFT_IMAGE_PATH_COLLECTION;
-//         fs.mkdirSync(path, { recursive: true });
-//         callback(null, path);
-//     },
-//     filename: (req, file, callback) => {
-//         const match = ["image/png", "image/jpeg", "image/jfif"];
-//         if (match.indexOf(file.mimetype) === -1) {
-//             var message = `${file.originalname} is invalid. Only accept png/jpeg.`;
-//             return callback(message, null);
-//         }
-//         var filename = `collection-${Date.now()}.${/[^.]+$/.exec(file.originalname)}`;
-//         callback(null, filename);
-//     }
-// });
+// File filter for images and videos (used by uploadNFTImg)
+const fileFilterWithVideo = (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'video/mp4', 'video/mpeg'];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only JPEG, JPG, PNG, MP4, and MPEG files are allowed!'), false);
+    }
+};
 
-// var nftStorage = multer.diskStorage({
-//     destination: (req, file, callback) => {
-//         // console.log("hello");
-//         const path = process.env.ASSET_IMAGE_PATH_NFT
-//         fs.mkdirSync(path, { recursive: true });
-//         callback(null, path);
-//     },
-//     filename: (req, file, callback) => {
-//         const match = ["image/png", "image/jpeg", "image/jfif"];
-//         if (match.indexOf(file.mimetype) === -1) {
-//             var message = `${file.originalname} is invalid. Only accept png/jpeg.`;
-//             return callback(message, null);
-//         }
-//         var filename = `nft-${Date.now()}.${/[^.]+$/.exec(file.originalname)}`;
-//         callback(null, filename);
-//     }
-// });
-
-
-// const uploadFields = multer({ storage: storageCollection }).fields([
-//     { name: 'field1', maxCount: 1 },
-//     { name: 'field2', maxCount: 1 }
-// ]);
-// const uploadNFT = multer({ storage: nftStorage }).array('nftImg');
-
-// const uploadCollectionFields = util.promisify(uploadFields);
-// const uploadNFTImg = util.promisify(uploadNFT);
-
-
-const fileFilter = (req, file, cb) => {
+// File filter for images only (used by uploadCollectionFields)
+const fileFilterImagesOnly = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
@@ -57,10 +22,27 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
-const uploadNFTImg = multer({ storage, fileFilter }).single('nftImg');
-const uploadCollectionFields = multer({ storage, fileFilter }).fields([
+// Configure uploadNFTImg with max file size (10MB) and field size (25MB)
+const uploadNFTImg = multer({
+    storage,
+    fileFilter: fileFilterWithVideo,
+    limits: {
+        fileSize: 25 * 1024 * 1024,  // 10MB for files
+        fieldSize: 25 * 1024 * 1024  // 25MB for field values
+    }
+}).single('nftImg');
+
+// Configure uploadCollectionFields with max file size (5MB) and field size (25MB)
+const uploadCollectionFields = multer({
+    storage,
+    fileFilter: fileFilterImagesOnly,
+    limits: {
+        fileSize: 25 * 1024 * 1024,   // 5MB for files
+        fieldSize: 25 * 1024 * 1024  // 25MB for field values
+    }
+}).fields([
     { name: 'field1', maxCount: 1 },
     { name: 'field2', maxCount: 1 }
 ]);
 
-module.exports = { uploadNFTImg, uploadCollectionFields }
+module.exports = { uploadNFTImg, uploadCollectionFields };

@@ -67,9 +67,9 @@ const createNFT = async (req, res) => {
             name,
             description,
             collectionName: findCollection.collectionName,
-            contractAddress,
-            category: category.name,
-            transactionHash,
+            // contractAddress,
+            // category: category.name,
+            // transactionHash,
         };
 
         // // Upload image to Pinata

@@ -36,10 +36,10 @@ const createCollection = async (req, res) => {
             return res.status(400).json({ status: false, message: "Collection already exists !" });
         }
 
-        const category = await Category.findOne({ categoryId });
-        if (!category) {
-            return res.status(400).json({ status: false, message: "Category does not exist" });
-        }
+        // const category = await Category.findOne({ categoryId });
+        // if (!category) {
+        //     return res.status(400).json({ status: false, message: "Category does not exist" });
+        // }
 
         // **Upload Images to Cloudinary**
         const logoImageResult = await uploadToCloudinary(field1[0].buffer);
