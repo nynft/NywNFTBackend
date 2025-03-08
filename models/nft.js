@@ -24,6 +24,7 @@ const nftSchema = new mongoose.Schema({
     sellExpiry: { type: Date },
     metadataURL: { type: String },
     ipfsImageUrl: { type: String },
+    quantity: { type: Number, required: true }
 }, { versionKey: false });
 
 const NFT = mongoose.model('NFT', nftSchema);

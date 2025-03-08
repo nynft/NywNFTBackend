@@ -9,7 +9,7 @@ const { Blob } = require('buffer');
 const Category = require('../models/category');
 
 
-// // Create a new NFT
+// Create a new NFT
 const createNFT = async (req, res) => {
     try {
         const verification = await verifyToken(req, res);
@@ -32,7 +32,7 @@ const createNFT = async (req, res) => {
         // console.log(imageUrl, "image url");
 
 
-        const { name, description, collectionId, contractAddress, categoryId, transactionHash, tokenId, royalty } = req.body;
+        const { name, description, collectionId, contractAddress, categoryId, transactionHash, tokenId, royalty, quantity } = req.body;
         if (!(name && description && collectionId && contractAddress && transactionHash && tokenId)) {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
@@ -136,6 +136,7 @@ const createNFT = async (req, res) => {
             imageUrl, // Cloudinary URL
             metadataURL: metadataGatewayURL,
             ipfsImageUrl: imageGatewayURL,
+            quantity
         });
 
         await nft.save();
