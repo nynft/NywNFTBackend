@@ -373,7 +373,7 @@ const getCreatedNft = async (req, res) => {
         return res.status(200).json({
             status: true,
             message: 'Created NFTs retrieved successfully',
-            data: isOwner
+            data: nft
         })
 
     } catch (error) {
