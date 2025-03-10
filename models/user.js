@@ -5,13 +5,13 @@ const userSchema = new mongoose.Schema(
     userId: { type: Number, unique: true },
     username: { type: String, unique: true, trim: true },
     email: { type: String, unique: true, sparse: true, lowercase: true },
-    // password: { type: String, minlength: 8 },
     bio: { type: String, maxlength: 300 },
-    profileImage: { type: String, default: "" },
+    profileLogo: { type: String, default: "" },
+    profileBanner: { type: String, default: "" },
     walletAddress: { type: String, unique: true },
-    createdAt: { type: Date, default: Date.now },
     verified: { type: Boolean, default: false },
-  }, { versionKey: false });
+    twitterName: { type: String }
+  }, { versionKey: false, timestamps: true });
 
 
 const userTokenSchema = new mongoose.Schema({

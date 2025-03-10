@@ -328,4 +328,81 @@ const removeNFTFromSale = async (req, res) => {
     }
 };
 
-module.exports = { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale };
+const getOwnedNft = async (req, res) => {
+    try {
+        const verification = await verifyToken(req, res);
+        if (!verification.isVerified) {
+            return res.status(401).json({ status: false, message: verification.message });
+        }
+        const walletAddress = verification.data.data.walletAddress;
+        const nft = await NFT.find({ buyerAddress: walletAddress, isMinted: true });
+
+        if (!nft || nft.length === 0) {
+            return res.status(404).json({ status: false, message: 'No minted NFTs found' });
+        }
+
+        return res.status(200).json({
+            status: true,
+            message: 'Minted NFTs retrieved successfully',
+            data: nft
+        });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+const getCreatedNft = async (req, res) => {
+    try {
+        const verification = await verifyToken(req, res);
+        if (!verification.isVerified) {
+            return res.status(401).json({ status: false, message: verification.message });
+        }
+        const walletAddress = verification.data.data.walletAddress;
+        const nft = await NFT.find({ walletAddress: walletAddress });
+        if (!nft || nft.length === 0) {
+            return res.status(404).json({ status: false, message: 'No created NFT' })
+        }
+
+        // Ensure all NFTs belong to the same user
+        const isOwner = nft.every(item => item.walletAddress === walletAddress);
+        if (!isOwner) {
+            return res.status(403).json({ status: false, message: 'You do not own these NFTs' });
+        }
+        return res.status(200).json({
+            status: true,
+            message: 'Created NFTs retrieved successfully',
+            data: isOwner
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" })
+    }
+}
+
+const getOnSaleNft = async (req, res) => {
+    try {
+        const verification = await verifyToken(req, res);
+        if (!verification.isVerified) {
+            return res.status(401).json({ status: false, message: verification.message });
+        }
+        const walletAddress = verification.data.data.walletAddress;
+        const nft = await NFT.find({ buyerAddress: walletAddress, isForSale: true });
+        if (!nft || nft.length === 0) {
+            return res.status(404).json({ status: false, message: 'No NFTs' })
+        }
+        return res.status(200).json({
+            status: true,
+            message: 'NFTs on sale retrieved successfully',
+            data: nft
+        })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" })
+    }
+}
+
+
+module.exports = { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale, getOwnedNft, getCreatedNft, getOnSaleNft };

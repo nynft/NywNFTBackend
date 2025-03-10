@@ -6,6 +6,8 @@ require("dotenv").config();
 const { verifyToken } = require("../services/tokenServices");
 const NFT = require('../models/nft');
 const Collection = require('../models/collection');
+const { sendConfirmationMail, sendWelcommingMail } = require('../services/emailService');
+const { cloudinary, uploadToCloudinary } = require('../services/cloudinaryServices');
 
 // Magic Link Login
 
@@ -196,4 +198,54 @@ const getUserProfileAssets = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" })
   }
 }
-module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser, getUserProfileAssets };
+
+
+const updateProfile = async (req, res) => {
+  try {
+    let field1, field2;
+    const verification = await verifyToken(req, res);
+    if (!verification.isVerified) {
+      return res.status(401).json({ status: false, message: verification.message });
+    }
+    const walletAddress = verification.data.data.walletAddress;
+    const userData = await User.findOne({ walletAddress: walletAddress })
+    if (!userData) {
+      return res.status(404).json({ status: false, message: "User not found" })
+    }
+    if (!req.files || !req.files["field1"] || !req.files["field2"]) {
+      return res.status(400).json({ status: false, message: "Files are required" });
+    }
+    field1 = req.files["field1"];
+    field2 = req.files["field2"];
+    const { username, email, bio, twitterName } = req.body;
+    // **Upload Images to Cloudinary**
+    const logoImageResult = await uploadToCloudinary(field1[0].buffer);
+    const bannerImageResult = await uploadToCloudinary(field2[0].buffer);
+    const findUserName = await User.findOne({ username: username })
+    if (findUserName) {
+      return res.status(400).json({ status: false, message: "Username already exists" })
+    }
+    const findEmail = await User.findOne({ email: email })
+    if (findEmail) {
+      return res.status(400).json({ status: false, message: "Email already exists" })
+    }
+    await User.updateOne({ walletAddress: walletAddress }, {
+      $set: {
+        username: username,
+        email: email,
+        bio: bio,
+        profileLogo: logoImageResult.secure_url,
+        profileBanner: bannerImageResult.secure_url,
+        twitterName
+      },
+    }, { new: true })
+    // Send confirmation mail
+    sendConfirmationMail(email, username);
+    return res.status(200).json({ status: true, message: "Update user profile successfully" })
+
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser, getUserProfileAssets, updateProfile };

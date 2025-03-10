@@ -18,8 +18,8 @@ const nftSchema = new mongoose.Schema({
         percentage: { type: Number, min: 0, max: 10 },
         recipient: { type: String }, // Wallet address receiving royalties
     },
-    isMinted: { type: Boolean, default: false },
-    isForSale: { type: Boolean, default: false },
+    isMinted: { type: Boolean, default: null },
+    isForSale: { type: Boolean, default: null },
     buyDate: { type: Date },
     sellExpiry: { type: Date },
     metadataURL: { type: String },

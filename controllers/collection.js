@@ -131,6 +131,34 @@ const collectionByUserId = async (req, res) => {
     }
 }
 
+const getCreatedCollection = async (req, res) => {
+    try {
+        const verification = await verifyToken(req, res);
+        if (!verification.isVerified) {
+            return res.status(401).json({ status: false, message: verification.message })
+        }
+        const walletAddress = verification.data.data.walletAddress;
+        const findUserCollection = await Collection.find({ creatorWallerAddress: walletAddress })
+
+        if (!findUserCollection || findUserCollection.length === 0) {
+            return res.status(404).json({ status: false, message: 'No created collection' })
+        }
+        // Ensure all NFTs belong to the same user
+        const isOwner = findUserCollection.every(item => item.creatorWallerAddress === walletAddress);
+        if (!isOwner) {
+            return res.status(403).json({ status: false, message: 'You do not own these collection' });
+        }
+
+        return res.status(200).json({
+            status: true,
+            message: 'Collections retrieved successfully',
+            data: findUserCollection
+        })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" })
+    }
+}
 
 
-module.exports = { createCollection, getAllUserCollection, checkUniqueCollectionName, collectionByUserId }
+module.exports = { createCollection, getAllUserCollection, checkUniqueCollectionName, collectionByUserId, getCreatedCollection }
