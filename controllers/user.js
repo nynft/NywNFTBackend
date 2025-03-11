@@ -240,12 +240,34 @@ const updateProfile = async (req, res) => {
       },
     }, { new: true })
     // Send confirmation mail
-    sendConfirmationMail(email, username);
-    return res.status(200).json({ status: true, message: "Update user profile successfully" })
+    sendConfirmationMail(email, verification.token);
+    return res.status(200).json({
+      status: true,
+      message: `Please check ${email} and verify your new email address.`
+    })
 
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "Internal server error" })
   }
 }
-module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser, getUserProfileAssets, updateProfile };
+
+
+const verifyEmail = async (req, res) => {
+  try {
+    const { token } = req.query;
+    const user = await UserToken.findOne({ token: token })
+    if (!user) {
+      return res.status(401).json({ status: false, message: "Invalid token" })
+    }
+    return res.status(200).json({
+      status: true,
+      message: "Your email is verified"
+    })
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal Server Error" })
+  }
+}
+
+module.exports = { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser, getUserProfileAssets, updateProfile, verifyEmail };

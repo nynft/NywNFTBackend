@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser, getUserProfileAssets, updateProfile } = require("../controllers/user");
+const { verifyMagicLogin, logout, userProfile, loginWithWallet, logoutUser, getUserProfileAssets, updateProfile, verifyEmail } = require("../controllers/user");
 const { uploadCollectionFields } = require('../middlewares/fileUpload');
 router.post("/magic-login", verifyMagicLogin);
 router.post("/logout", logout);
@@ -9,4 +9,5 @@ router.post("/login-with-wallet", loginWithWallet);
 router.post("/logout-user", logoutUser);
 router.get("/profile/assets", getUserProfileAssets);
 router.put('/update-profile', uploadCollectionFields, updateProfile);
+router.get('/verify-email', verifyEmail);
 module.exports = router;

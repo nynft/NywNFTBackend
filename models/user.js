@@ -2,15 +2,16 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema(
   {
-    userId: { type: Number, unique: true },
-    username: { type: String, unique: true, trim: true },
+    userId: { type: Number },
+    username: { type: String, unique: true, trim: true, sparse: true },
     email: { type: String, unique: true, sparse: true, lowercase: true },
     bio: { type: String, maxlength: 300 },
     profileLogo: { type: String, default: "" },
     profileBanner: { type: String, default: "" },
     walletAddress: { type: String, unique: true },
     verified: { type: Boolean, default: false },
-    twitterName: { type: String }
+    twitterName: { type: String },
+    intagramName: { type: String }
   }, { versionKey: false, timestamps: true });
 
 
