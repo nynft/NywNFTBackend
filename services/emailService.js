@@ -28,7 +28,7 @@ const sendConfirmationMail = (emailAddress, verificationToken) => {
         from: process.env.EMAIL,
         to: emailAddress,
         subject: 'Verify your email to get started',
-        html: `<p>Finish setting up your account to unlock all of your account features: <a href="http://localhost:5000/api/user/verify-email?token=${verificationToken}">Verify your email</p>`
+        html: `<p>Finish setting up your account to unlock all of your account features: <a href="https://nywnftbackend-production.up.railway.app/api/user/verify-email?token=${verificationToken}">Verify your email</p>`
     };
     sendWelcomingMail(mailOptions1);
 };

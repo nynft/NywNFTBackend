@@ -11,7 +11,8 @@ const userSchema = new mongoose.Schema(
     walletAddress: { type: String, unique: true },
     verified: { type: Boolean, default: false },
     twitterName: { type: String },
-    intagramName: { type: String }
+    instagramName: { type: String },
+    // isEmailVerified:{}
   }, { versionKey: false, timestamps: true });
 
 

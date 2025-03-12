@@ -21,7 +21,7 @@ const createCollection = async (req, res) => {
         field1 = req.files["field1"];
         field2 = req.files["field2"];
 
-        const { collectionName, collectionSymbol, categoryId, contractAddress, royalty, description, collectionCreationHash, nftStandard } = req.body;
+        const { collectionName, collectionSymbol, categoryId, contractAddress, royalty, description, collectionCreationHash, nftStandard, isDrop, createdTimestamp } = req.body;
 
         // Validate nftStandard
         const validNftStandards = ["ERC-721", "ERC-1155"];
@@ -29,12 +29,12 @@ const createCollection = async (req, res) => {
             return res.status(400).json({ status: false, message: `Invalid nftStandard value. Allowed values are: ${validNftStandards.join(", ")}` });
         }
 
-        let collectionExists = await Collection.findOne({ collectionName });
-        if (collectionExists) {
-            await removeUnwantedCollectionImg(field1[0].filename);
-            await removeUnwantedCollectionImg(field2[0].filename);
-            return res.status(400).json({ status: false, message: "Collection already exists !" });
-        }
+        // let collectionExists = await Collection.findOne({ collectionName });
+        // if (collectionExists) {
+        //     await removeUnwantedCollectionImg(field1[0].filename);
+        //     await removeUnwantedCollectionImg(field2[0].filename);
+        //     return res.status(400).json({ status: false, message: "Collection already exists !" });
+        // }
 
         // const category = await Category.findOne({ categoryId });
         // if (!category) {
@@ -62,6 +62,8 @@ const createCollection = async (req, res) => {
             collectionCreationHash,
             nftStandard,
             featured: true,
+            isDrop,
+            createdTimestamp
         };
         await Collection.create(obj);
         return res.status(201).json({ status: true, message: "Collection created successfully", data: obj });

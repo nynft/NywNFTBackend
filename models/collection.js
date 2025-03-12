@@ -16,7 +16,9 @@ const collectionSchema = new mongoose.Schema(
     nftStandard: { type: String, enum: ["ERC-721", "ERC-1155"], required: true },
     mintQuantity: {
       type: Number, //Number of minted quantity
-    }
+    },
+    isDrop: { type: Boolean, default: false, required: true },
+    createdTimestamp: { type: Date },
   }, { versionKey: false, timestamps: true });
 
 const Collection = mongoose.model("Collection", collectionSchema);

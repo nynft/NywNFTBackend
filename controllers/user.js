@@ -217,7 +217,7 @@ const updateProfile = async (req, res) => {
     }
     field1 = req.files["field1"];
     field2 = req.files["field2"];
-    const { username, email, bio, twitterName } = req.body;
+    const { username, email, bio, twitterName, instagramName } = req.body;
     // **Upload Images to Cloudinary**
     const logoImageResult = await uploadToCloudinary(field1[0].buffer);
     const bannerImageResult = await uploadToCloudinary(field2[0].buffer);
@@ -236,7 +236,8 @@ const updateProfile = async (req, res) => {
         bio: bio,
         profileLogo: logoImageResult.secure_url,
         profileBanner: bannerImageResult.secure_url,
-        twitterName
+        twitterName,
+        instagramName
       },
     }, { new: true })
     // Send confirmation mail

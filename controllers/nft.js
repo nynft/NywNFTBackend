@@ -32,7 +32,7 @@ const createNFT = async (req, res) => {
         // console.log(imageUrl, "image url");
 
 
-        const { name, description, collectionId, contractAddress, categoryId, transactionHash, tokenId, royalty, quantity } = req.body;
+        const { name, description, collectionId, contractAddress, categoryId, transactionHash, tokenId, royalty, quantity, isMinted } = req.body;
         if (!(name && description && collectionId && contractAddress && transactionHash && tokenId)) {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
@@ -136,6 +136,7 @@ const createNFT = async (req, res) => {
             imageUrl, // Cloudinary URL
             metadataURL: metadataGatewayURL,
             ipfsImageUrl: imageGatewayURL,
+            isMinted: true,
             quantity
         });
 
@@ -389,7 +390,7 @@ const getOnSaleNft = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const nft = await NFT.find({ buyerAddress: walletAddress, isForSale: true });
+        const nft = await NFT.find({ buyerAddress: walletAddress, onSale: true });
         if (!nft || nft.length === 0) {
             return res.status(404).json({ status: false, message: 'No NFTs' })
         }
