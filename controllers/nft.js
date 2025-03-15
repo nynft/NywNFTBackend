@@ -7,6 +7,7 @@ const { pinata } = require('../services/pinataServices');
 const { uploadToCloudinary } = require('../services/cloudinaryServices');
 const { Blob } = require('buffer');
 const Category = require('../models/category');
+const SELLNFT = require('../models/sell');
 
 
 // Create a new NFT
@@ -32,7 +33,7 @@ const createNFT = async (req, res) => {
         // console.log(imageUrl, "image url");
 
 
-        const { name, description, collectionId, contractAddress, categoryId, transactionHash, tokenId, royalty, quantity, isMinted } = req.body;
+        const { name, description, collectionId, contractAddress, categoryId, transactionHash, tokenId, quantity, isMinted } = req.body;
         if (!(name && description && collectionId && contractAddress && transactionHash && tokenId)) {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
@@ -54,9 +55,9 @@ const createNFT = async (req, res) => {
         if (checkTrx) {
             return res.status(400).json({ status: false, message: "Transaction hash already exists" });
         }
-        if (royalty.percentage > 10) {
-            return res.status(400).json({ status: false, message: "Royalty percentage cannot more than 10" })
-        }
+        // if (royalty.percentage > 10) {
+        //     return res.status(400).json({ status: false, message: "Royalty percentage cannot more than 10" })
+        // }
 
         // Generate tokenId
         const sellCount = await NFT.countDocuments();
@@ -128,15 +129,16 @@ const createNFT = async (req, res) => {
             name,
             description,
             collectionName: findCollection.collectionName,
-            royalty,
+            // royalty,
             categoryId,
             categoryName: category.name,
-            transactionHash,
             contractAddress,
             imageUrl, // Cloudinary URL
+            ownedBy: walletAddress,// Wallet address of the owner
             metadataURL: metadataGatewayURL,
             ipfsImageUrl: imageGatewayURL,
             isMinted: true,
+            transactionHash,
             quantity
         });
 
@@ -151,8 +153,40 @@ const createNFT = async (req, res) => {
 
 const getNFTs = async (req, res) => {
     try {
-        const nfts = await NFT.find({}).sort({ _id: -1 });
-        return res.status(200).json({ status: true, message: "Get all nft's", data: nfts });
+        const page = parseInt(req.query.page) || 1; // Ensure page is an integer
+        const perPage = 8;
+        const skip = (page - 1) * perPage;
+
+        const query = {
+            $or: [
+                {
+                    $and: [
+                        { isMinted: true },
+                        { onSale: true }
+                    ]
+                },
+                {
+                    $and: [
+                        { isMinted: false },
+                        { onSale: { $ne: true } },
+                        { quantity: { $gt: 0 } } // Ensure quantity is a number, not a string
+                    ]
+                }
+            ]
+        };
+        const nfts = await SELLNFT.find(query).sort({ _id: -1 }).skip(skip).limit(perPage);
+        const totalNFTs = await SELLNFT.countDocuments(query); // Get total count for pagination
+
+        return res.status(200).json({
+            status: true,
+            message: "Get all NFTs for sell",
+            data: nfts,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalNFTs / perPage),
+                totalItems: totalNFTs,
+            },
+        });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -162,7 +196,7 @@ const getNFTs = async (req, res) => {
 const getNftById = async (req, res) => {
     try {
         const { tokenId } = req.params;
-        const nft = await NFT.findOne({ tokenId });
+        const nft = await SELLNFT.findOne({ tokenId });
         if (!nft) {
             return res.status(404).json({ status: false, message: "NFT not found" });
         }
@@ -180,39 +214,50 @@ const buyNFT = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message })
         }
         const walletAddress = verification.data.data.walletAddress;
-        const { tokenId, isMinted, transactionHash } = req.body;
+        const { tokenId, isMinted, transactionHash, quantity, contractAddress, price } = req.body;
 
         if (!(tokenId && isMinted && transactionHash)) {
             return res.status(400).json({ status: false, message: "All fields are required" })
         }
+        const nft = await SELLNFT.findOne({ tokenId });
+        if (price < nft.price) {
+            return res.status(400).json({ status: false, message: 'Price cannot be lessthan price' });
+        }
 
-        const updateNFT = await NFT.updateOne({ tokenId },
+        if (quantity > nft.quantity) {
+            return res.status(400).json({ status: false, message: 'Requested quantity exceeds available NFT quantity' });
+        }
+
+        const updateNFT = await SELLNFT.updateOne({ tokenId },
             {
                 $set: {
                     isMinted,
-                    isForSale: false,
-                    buyerAddress: walletAddress,
+                    onSale: false,
+                    ownedBy: walletAddress,
                     transactionHash: transactionHash,
+                    contractAddress: contractAddress,
+                    price,
                     buyDate: Date.now()
                 },
-                $unset: { sellExpiry: 1 }
+                $inc: { quantity: -quantity }
             },
         );
         if (!updateNFT) {
             return res.status(404).json({ status: false, message: "NFT not found" });
         }
-        const nft = await NFT.findOne({ tokenId });
 
         const newObj = {
             tokenId: nft.tokenId,
             buyerAddress: walletAddress,
-            buyDate: Date.now(),
             price: nft.price,
-            sellerAddress: nft.walletAddress,
+            sellerAddress: nft.ownedBy,
             contractAddress: nft.contractAddress,
-            transactionHash: transactionHash
+            transactionHash: transactionHash,
+            quantity: quantity,
+            buyDate: Date.now(),
         }
         await BuyingHistory.create(newObj);
+        await NFT.updateOne({ tokenId }, { $set: { ownedBy: walletAddress } });
         return res.status(200).json({ status: true, message: "NFT bought successfully" });
 
     } catch (error) {
@@ -230,12 +275,13 @@ const listNFTForSale = async (req, res) => {
         }
 
         const walletAddress = verification.data.data.walletAddress;
-        const { tokenId, price, sellExpiry } = req.body;
+        const { tokenId, price, contractAddress, transactionHash, quantity } = req.body;
 
         // Validate input
-        if (!(tokenId && price)) {
+        if (!(tokenId && price && contractAddress && transactionHash && quantity)) {
             return res.status(400).json({ status: false, message: 'All fields are required' });
         }
+
         if (price < 0) {
             return res.status(400).json({ status: false, message: 'Price cannot be negative' });
         }
@@ -246,39 +292,58 @@ const listNFTForSale = async (req, res) => {
             return res.status(404).json({ status: false, message: 'NFT not found' });
         }
 
+        // process.exit(0)
         // Verify ownership
-        if (nft.walletAddress !== walletAddress) {
+        if (nft.ownedBy !== walletAddress) {
             return res.status(403).json({ status: false, message: 'You are not the owner of this NFT' });
         }
 
-        if (nft.isForSale === true) {
+        if (nft.onSale === true) {
             return res.status(400).json({ status: false, message: 'NFT is already listed for sale' });
         }
 
-        // Update NFT for sale
-        nft.price = price;
-        nft.isForSale = true;
-        // nft.sellExpiry = expiryDate;
-
-        // Handle sellExpiry only if provided and valid
-        if (sellExpiry) {
-            const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + parseInt(sellExpiry));
-
-            // Validate if expiry is in the future (optional, but good practice)
-            if (expiryDate <= new Date()) {
-                return res.status(400).json({ status: false, message: 'Sell expiry must be in the future' });
-            }
-
-            nft.sellExpiry = expiryDate;
+        if (quantity > nft.quantity) {
+            return res.status(400).json({ status: false, message: 'Requested quantity exceeds available NFT quantity' });
         }
 
-        await nft.save();
+        const newObj = {
+            tokenId: tokenId,
+            name: nft.name,
+            description: nft.description,
+            imageUrl: nft.imageUrl,
+            walletAddress: nft.walletAddress,
+            collectionId: nft.collectionId,
+            categoryId: nft.categoryId,
+            collectionName: nft.collectionName,
+            categoryName: nft.categoryName,
+            contractAddress,
+            ownedBy: nft.ownedBy,
+            price,
+            transactionHash,
+            isMinted: nft.isMinted,
+            onSale: true,
+            quantity: quantity,
+            matadataUrl: nft.metadataURL,
+            ipfsImageUrl: nft.ipfsImageUrl,
+            quantity: quantity
+        }
+
+        // console.log(newObj, "obje");
+        await SELLNFT.create(newObj);
+
+        // Update the NFT's onSale status and quantity
+        await NFT.updateOne(
+            { tokenId: tokenId },
+            {
+                $set: { onSale: true },
+                $inc: { quantity: -quantity }
+            }, { new: true }
+        );
 
         return res.status(200).json({
             status: true,
             message: 'NFT listed for sale successfully',
-            data: nft
+            data: newObj
         });
     } catch (error) {
         console.error('Error listing NFT for sale:', error);
@@ -294,29 +359,33 @@ const removeNFTFromSale = async (req, res) => {
         }
 
         const walletAddress = verification.data.data.walletAddress;
-        const { tokenId } = req.body;
+        const { tokenId, contractAddress, transactionHash, timestamp } = req.body;
 
-        if (!tokenId) {
-            return res.status(400).json({ status: false, message: 'nftId is required' });
+        if (!(tokenId && contractAddress && transactionHash && timestamp)) {
+            return res.status(400).json({ status: false, message: 'All fields are required' });
         }
 
-        const nft = await NFT.findOne({ tokenId });
+        const nft = await SELLNFT.findOne({ tokenId });
         if (!nft) {
             return res.status(404).json({ status: false, message: 'NFT not found' });
         }
 
-        if (nft.walletAddress !== walletAddress) {
+        if (nft.ownedBy !== walletAddress) {
             return res.status(403).json({ status: false, message: 'You are not the owner of this NFT' });
         }
 
-        if (!nft.isForSale) {
+        if (!nft.onSale) {
             return res.status(400).json({ status: false, message: 'NFT is not currently for sale' });
         }
 
-        nft.isForSale = false;
-        nft.price = undefined;
-        nft.sellExpiry = undefined;
-        await nft.save();
+        await SELLNFT.updateOne({ tokenId }, {
+            $set: {
+                onSale: false,
+                contractAddress: contractAddress,
+                transactionHash: transactionHash,
+                timestamp: timestamp
+            },
+        })
 
         return res.status(200).json({
             status: true,
@@ -336,7 +405,7 @@ const getOwnedNft = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const nft = await NFT.find({ buyerAddress: walletAddress, isMinted: true });
+        const nft = await NFT.find({ ownedBy: walletAddress, isMinted: true });
 
         if (!nft || nft.length === 0) {
             return res.status(404).json({ status: false, message: 'No minted NFTs found' });
@@ -390,7 +459,7 @@ const getOnSaleNft = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const nft = await NFT.find({ buyerAddress: walletAddress, onSale: true });
+        const nft = await NFT.find({ ownedBy: walletAddress, onSale: true });
         if (!nft || nft.length === 0) {
             return res.status(404).json({ status: false, message: 'No NFTs' })
         }
