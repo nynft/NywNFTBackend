@@ -38,10 +38,10 @@ const createNFT = async (req, res) => {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
 
-        const checkToken = await NFT.findOne({ tokenId });
-        if (checkToken) {
-            return res.status(400).json({ status: false, message: "Token already exists" });
-        }
+        // const checkToken = await NFT.findOne({ tokenId });
+        // if (checkToken) {
+        //     return res.status(400).json({ status: false, message: "Token already exists" });
+        // }ts
         const findCollection = await Collection.findOne({ collectionId });
         if (!findCollection) {
             return res.status(404).json({ status: false, message: "Collection not found" });
