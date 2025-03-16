@@ -296,7 +296,7 @@ const listNFTForSale = async (req, res) => {
             return res.status(400).json({ status: false, message: "NFT is already listed for sale" });
         }
 
-        if (quantity >= nft.quantity) {
+        if (quantity > nft.quantity) {
             return res.status(400).json({ status: false, message: "Requested quantity exceeds available NFT quantity" });
         }
 
@@ -325,14 +325,16 @@ const listNFTForSale = async (req, res) => {
         await SELLNFT.create(newObj);
 
         // Update the NFT's onSale status and quantity
-        await NFT.updateOne(
-            { tokenId: tokenId },
+       const updatedNFT= await NFT.findOneAndUpdate(
+            { tokenId: tokenId ,contractAddress},
+            
             {
                 $set: { onSale: true },
                 $inc: { quantity: -quantity },
             },
             { new: true }
         );
+        console.log(updatedNFT)
 
         return res.status(200).json({
             status: true,
