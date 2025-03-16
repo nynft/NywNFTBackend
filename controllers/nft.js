@@ -287,17 +287,25 @@ const listNFTForSale = async (req, res) => {
         }
 
         // Find the NFT
-        const nft = await NFT.findOne({ tokenId });
+        const nft = await SELLNFT.findOne({ tokenId });
+        console.log("nft",nft);
+        
         if (!nft) {
             return res.status(404).json({ status: false, message: 'NFT not found' });
         }
+        console.log(nft.owned);
+        console.log(walletAddress);
+
+        
+        console.log(nft.ownedBy !== walletAddress);
 
         // process.exit(0)
         // Verify ownership
-        // if (nft.ownedBy !== walletAddress) {
-        //     return res.status(403).json({ status: false, message: 'You are not the owner of this NFT' });
-        // }
+        if (nft.ownedBy !== walletAddress) {
+            return res.status(403).json({ status: false, message: 'You are not the owner of this NFT' });
+        }
 
+        
         if (nft.onSale === true) {
             return res.status(400).json({ status: false, message: 'NFT is already listed for sale' });
         }
