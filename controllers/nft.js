@@ -161,23 +161,24 @@ const getNftById = async (req, res) => {
         const wallet = nft.ownedBy;
 
         //owner profile 
-        const ownerProfile = await SELLNFT.findOne({ walletAddress: wallet });
+        const ownerProfile = await NFT.findOne({ walletAddress: wallet });
         // console.log(ownerProfile)
-        const walletAddress = ownerProfile;
-        // console.log("wallet", walletAddress);
+        const walletAddress = ownerProfile.ownedBy;
+        console.log("wallet", walletAddress);
         const profile = ownerProfile?.profileLogo;
         const userNameOfOwner = ownerProfile?.username;
-        // console.log("user name", userNameOfOwner);
+        console.log("user name", userNameOfOwner);
 
 
 
         // creator wallet profile
         const creatorProfile = await COLLECTION.findOne({ creatorWallerAddress: wallet })
-        // console.log("create profile", creatorProfile);
+
+        console.log("create profile", creatorProfile);
         const creatorProfileWallet = creatorProfile?.creatorWallerAddress
         const creatorProfileImage = creatorProfile?.logoImage
         const userNameOfCreator = ownerProfile?.username;
-        // console.log("userNameOfCreator", userNameOfCreator);
+        console.log("userNameOfCreator", userNameOfCreator);
 
         // console.log("creatr",creatorProfileWallet);
 
@@ -218,9 +219,9 @@ const buyNFT = async (req, res) => {
             return res.status(400).json({ status: false, message: "Price cannot be lessthan price" });
         }
 
-        if (quantity > nft.quantity) {
-            return res.status(400).json({ status: false, message: "Requested quantity exceeds available NFT quantity" });
-        }
+        // if (quantity > nft.quantity) {
+        //     return res.status(400).json({ status: false, message: "Requested quantity exceeds available NFT quantity" });
+        // }
 
         const updateNFT = await SELLNFT.updateOne(
             { tokenId },
