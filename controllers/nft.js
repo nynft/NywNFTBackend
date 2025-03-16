@@ -8,7 +8,7 @@ const { uploadToCloudinary } = require("../services/cloudinaryServices");
 const { Blob } = require("buffer");
 const Category = require("../models/category");
 const SELLNFT = require("../models/sell");
-const User = require("../models/user");
+const {User} = require("../models/user");
 const COLLECTION = require("../models/collection")
 
 // Create a new NFT
@@ -205,13 +205,13 @@ const getNFTs = async (req, res) => {
     //     },
     //   ],
     // };
-    const nfts = await SELLNFT.find(
+    const nfts = await NFT.find(
         {}
     )
       .sort({ _id: 1 })
       .skip(skip)
       .limit(perPage);
-    const totalNFTs = await SELLNFT.countDocuments(); // Get total count for pagination
+    const totalNFTs = await NFT.countDocuments(); // Get total count for pagination
 
     return res.status(200).json({
       status: true,
@@ -231,33 +231,38 @@ const getNFTs = async (req, res) => {
 
 const getNftById = async (req, res) => {
   try {
-    const { tokenId } = req.params;
-    const nft = await SELLNFT.findOne({ tokenId });
+    const { tokenId,contractAddress } = req.query;
+    const nft = await NFT.findOne({ tokenId ,contractAddress});
+    if (!nft) {
+        return res.status(404).json({ status: false, message: "NFT not found" });
+      }
+    console.log("nft",nft)
     const wallet = nft.ownedBy;
-    console.log("wallet", wallet);
+    console.log("wallet owned", wallet);
 
-    const ownerProfile = await User.User.findOne({ walletAddress: wallet });
-    const walletAddress = ownerProfile.walletAddress;
-    const profile = ownerProfile.profileLogo;
-    const userNameOfOwner =  ownerProfile.username;
+//owner profile 
+    const ownerProfile = await User.findOne({ walletAddress: wallet });
+    console.log(ownerProfile)
+    const walletAddress = ownerProfile;
+    console.log("wallet",walletAddress);
+    const profile = ownerProfile?.profileLogo;
+    const userNameOfOwner =  ownerProfile?.username;
     console.log("user name",userNameOfOwner);
     
 
-    // console.log("user", walletAddress);
-    // console.log("profile", profile);
-
+  
+// creator wallet profile
     const creatorProfile = await COLLECTION.findOne({creatorWallerAddress: wallet})
-    const creatorProfileWallet = creatorProfile.creatorWallerAddress
-    const creatorProfileImage = creatorProfile.logoImage
-    const userNameOfCreator= ownerProfile.username;
+    console.log("create profile",creatorProfile);
+    const creatorProfileWallet = creatorProfile?.creatorWallerAddress
+    const creatorProfileImage = creatorProfile?.logoImage
+    const userNameOfCreator= ownerProfile?.username;
     console.log("userNameOfCreator",userNameOfCreator);
     
     // console.log("creatr",creatorProfileWallet);
     
 
-    if (!nft) {
-      return res.status(404).json({ status: false, message: "NFT not found" });
-    }
+
     return res
       .status(200)
       .json({
@@ -367,6 +372,7 @@ const listNFTForSale = async (req, res) => {
     }
 
     const walletAddress = verification.data.data.walletAddress;
+    console.log("walletAddress",walletAddress);
     const { tokenId, price, contractAddress, transactionHash, quantity } =
       req.body;
 
@@ -384,19 +390,20 @@ const listNFTForSale = async (req, res) => {
     }
 
     // Find the NFT
-    const nft = await SELLNFT.findOne({ tokenId });
+    const nft = await NFT.findOne({ tokenId,contractAddress });
     console.log("nft", nft);
 
     if (!nft) {
       return res.status(404).json({ status: false, message: "NFT not found" });
     }
-    console.log(nft.owned);
+    console.log(nft.ownedBy);
     console.log(walletAddress);
 
-    console.log(nft.ownedBy !== walletAddress);
+    // console.log(nft.ownedBy !== walletAddress);
 
     // process.exit(0)
     // Verify ownership
+    // const collection = await COLLECTION.findOne({creatorWallerAddress:walletAddress})
     if (nft.ownedBy !== walletAddress) {
       return res
         .status(403)
@@ -409,7 +416,7 @@ const listNFTForSale = async (req, res) => {
         .json({ status: false, message: "NFT is already listed for sale" });
     }
 
-    if (quantity > nft.quantity) {
+    if (quantity >= nft.quantity) {
       return res
         .status(400)
         .json({
@@ -437,7 +444,7 @@ const listNFTForSale = async (req, res) => {
       quantity: quantity,
       matadataUrl: nft.metadataURL,
       ipfsImageUrl: nft.ipfsImageUrl,
-      quantity: quantity,
+    //   quantity: quantity,
     };
 
     // console.log(newObj, "obje");
