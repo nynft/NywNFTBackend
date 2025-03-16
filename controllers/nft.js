@@ -296,7 +296,7 @@ const listNFTForSale = async (req, res) => {
             return res.status(400).json({ status: false, message: "NFT is already listed for sale" });
         }
 
-        if (quantity >= nft.quantity) {
+        if (quantity > nft.quantity) {
             return res.status(400).json({ status: false, message: "Requested quantity exceeds available NFT quantity" });
         }
 
