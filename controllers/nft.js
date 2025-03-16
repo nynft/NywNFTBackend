@@ -128,7 +128,7 @@ const createNFT = async (req, res) => {
 const getNFTs = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1; // Ensure page is an integer
-        const perPage = 8;
+        const perPage = 20;
         const skip = (page - 1) * perPage;
 
         const nfts = await SELLNFT.find({}).sort({ _id: 1 }).skip(skip).limit(perPage);
@@ -153,7 +153,7 @@ const getNFTs = async (req, res) => {
 const getNftById = async (req, res) => {
     try {
         const { tokenId, contractAddress } = req.query;
-        const nft = await NFT.findOne({ tokenId, contractAddress });
+        const nft = await SELLNFT.findOne({ tokenId, contractAddress });
         if (!nft) {
             return res.status(404).json({ status: false, message: "NFT not found" });
         }
@@ -161,7 +161,7 @@ const getNftById = async (req, res) => {
         const wallet = nft.ownedBy;
 
         //owner profile 
-        const ownerProfile = await User.findOne({ walletAddress: wallet });
+        const ownerProfile = await SELLNFT.findOne({ walletAddress: wallet });
         // console.log(ownerProfile)
         const walletAddress = ownerProfile;
         // console.log("wallet", walletAddress);
@@ -456,7 +456,7 @@ const getOnSaleNft = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const nft = await NFT.find({ ownedBy: walletAddress, onSale: true });
+        const nft = await SELLNFT.find({ ownedBy: walletAddress, onSale: true });
         if (!nft || nft.length === 0) {
             return res.status(404).json({ status: false, message: "No NFTs" });
         }
