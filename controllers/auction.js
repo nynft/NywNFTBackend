@@ -37,11 +37,12 @@ const auctionCreated = async (req, res) => {
             walletAddress: walletAddress,
             startPrice,
             minIncrementAmount,
+            transactionHash,
             contractAddress,
             quantity,
             startTime,
             endTime,
-            auctionStatus: 'pending'
+            auctionStatus: 'active'
         }
         await Auction.create(newObj);
         return res.status(201).json({ status: true, message: "Auction is created successfully" });
@@ -67,8 +68,8 @@ const getAllAuction = async (req, res) => {
 // get auction by id
 const getAuctionById = async (req, res) => {
     try {
-        const auctionId = req.params.id;
-        const auction = await Auction.findById(auctionId);
+        const { auctionId } = req.params;
+        const auction = await Auction.findOne({ auctionId });
         if (!auction) {
             return res.status(404).json({ status: false, message: "Auction not found" })
         }
@@ -88,23 +89,25 @@ const placeBid = async (req, res) => {
             return res.status(401).json({ message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const { auctionId, amount } = req.body;
-        if (!(auctionId && amount)) {
+        const { auctionId, amount, transactionHash, contractAddress } = req.body;
+        if (!(auctionId && amount && transactionHash && contractAddress)) {
             return res.status(400).json({ message: "All fields are required" });
         }
-        const auction = await Auction.findById(auctionId);
+        const auction = await Auction.findOne({ auctionId });
         if (!auction) {
             return res.status(404).json({ status: false, message: "Auction not found" })
         }
         // check if the user has enough balance
-        if (auction.startPrice < amount) {
+        if (amount < auction.startPrice) {
             return res.status(400).json({ message: "Bid amount should be greater than the start amount" })
         }
 
         await Auction.updateOne({ auctionId }, {
             $set: {
                 amount: amount,
-                bidderAddress: walletAddress
+                bidderAddress: walletAddress,
+                contractAddress,
+                transactionHash
             }
         })
 
@@ -124,7 +127,7 @@ const auctionSettled = async (req, res) => {
             return res.status(401).json({ message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const { auctionId, auctionStatus, amount } = req.body
+        const { auctionId, auctionStatus, amount, transactionHash, contractAddress } = req.body
         if (!(auctionId && auctionStatus && amount)) {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }

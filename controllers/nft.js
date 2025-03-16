@@ -157,25 +157,25 @@ const getNFTs = async (req, res) => {
         const perPage = 8;
         const skip = (page - 1) * perPage;
 
-        const query = {
-            $or: [
-                {
-                    $and: [
-                        { isMinted: true },
-                        { onSale: true }
-                    ]
-                },
-                {
-                    $and: [
-                        { isMinted: false },
-                        { onSale: { $ne: true } },
-                        { quantity: { $gt: 0 } } // Ensure quantity is a number, not a string
-                    ]
-                }
-            ]
-        };
-        const nfts = await SELLNFT.find(query).sort({ _id: -1 }).skip(skip).limit(perPage);
-        const totalNFTs = await SELLNFT.countDocuments(query); // Get total count for pagination
+        // const query = {
+        //     $or: [
+        //         {
+        //             $and: [
+        //                 { isMinted: true },
+        //                 { onSale: true }
+        //             ]
+        //         },
+        //         {
+        //             $and: [
+        //                 { isMinted: false },
+        //                 { onSale: { $ne: true } },
+        //                 { quantity: { $gt: 0 } } // Ensure quantity is a number, not a string
+        //             ]
+        //         }
+        //     ]
+        // };
+        const nfts = await SELLNFT.find({}).sort({ _id: 1 }).skip(skip).limit(perPage);
+        const totalNFTs = await SELLNFT.countDocuments(); // Get total count for pagination
 
         return res.status(200).json({
             status: true,

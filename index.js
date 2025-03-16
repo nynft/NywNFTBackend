@@ -10,7 +10,7 @@ const userRoute = require("./routes/user");
 const cartRoutes = require("./routes/cart");
 const categoryRoute = require('./routes/category');
 const collectionRoutes = require('./routes/collection');
-// const bidRoutes = require('./routes/bid');
+const auctionRoutes = require('./routes/auction');
 const nftRoutes = require('./routes/nft');
 
 app.use(express.json());
@@ -28,7 +28,7 @@ app.use("/api/user", userRoute);
 app.use("/api/cart", cartRoutes);
 app.use('/api/category', categoryRoute);
 app.use('/api/collection', collectionRoutes);
-// app.use('/api/bid', bidRoutes);
+app.use('/api/auction', auctionRoutes);
 app.use('/api/nft', nftRoutes);
 
 
