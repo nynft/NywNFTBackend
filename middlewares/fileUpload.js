@@ -45,4 +45,14 @@ const uploadCollectionFields = multer({
     { name: 'field2', maxCount: 1 }
 ]);
 
-module.exports = { uploadNFTImg, uploadCollectionFields };
+const uploadCollectionImg = multer({
+    storage,
+    fileFilter: fileFilterWithVideo,
+    limits: {
+        fileSize: 25 * 1024 * 1024,  // 10MB for files
+        fieldSize: 25 * 1024 * 1024  // 25MB for field values
+    }
+}).single('field1');
+
+
+module.exports = { uploadNFTImg, uploadCollectionFields, uploadCollectionImg };

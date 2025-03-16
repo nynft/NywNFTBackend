@@ -9,17 +9,23 @@ const { cloudinary, uploadToCloudinary } = require('../services/cloudinaryServic
 // create collection for user
 
 const createCollection = async (req, res) => {
-    let field1, field2;
     try {
         const verification = await verifyToken(req, res);
         if (!verification.isVerified) {
             return res.status(401).json({ status: false, message: verification.message });
         }
-        if (!req.files || !req.files["field1"] || !req.files["field2"]) {
-            return res.status(400).json({ status: false, message: "Files are required" });
+        // Ensure a single file is uploaded
+        if (!req.file) {
+            return res.status(400).json({ status: false, message: "Collection image is required" });
         }
-        field1 = req.files["field1"];
-        field2 = req.files["field2"];
+        // Upload image to Cloudinary
+        const cloudinaryResult = await uploadToCloudinary(req.file.buffer, {
+            folder: "Storage",
+        });
+        if (!cloudinaryResult?.secure_url) {
+            throw new Error("Failed to upload image to Cloudinary");
+        }
+        const imageUrl = cloudinaryResult.secure_url;
 
         const { collectionName, collectionSymbol, categoryId, contractAddress, royalty, description, collectionCreationHash, nftStandard, isDrop, createdTimestamp } = req.body;
 
@@ -29,21 +35,6 @@ const createCollection = async (req, res) => {
             return res.status(400).json({ status: false, message: `Invalid nftStandard value. Allowed values are: ${validNftStandards.join(", ")}` });
         }
 
-        // let collectionExists = await Collection.findOne({ collectionName });
-        // if (collectionExists) {
-        //     await removeUnwantedCollectionImg(field1[0].filename);
-        //     await removeUnwantedCollectionImg(field2[0].filename);
-        //     return res.status(400).json({ status: false, message: "Collection already exists !" });
-        // }
-
-        // const category = await Category.findOne({ categoryId });
-        // if (!category) {
-        //     return res.status(400).json({ status: false, message: "Category does not exist" });
-        // }
-
-        // **Upload Images to Cloudinary**
-        const logoImageResult = await uploadToCloudinary(field1[0].buffer);
-        const bannerImageResult = await uploadToCloudinary(field2[0].buffer);
 
         const collectionCount = await Collection.countDocuments();
         const id = parseInt(collectionCount) + 1;
@@ -51,17 +42,13 @@ const createCollection = async (req, res) => {
             collectionId: id,
             collectionName,
             collectionSymbol,
-            // categoryId,
-            // categoryName: category.name,
-            logoImage: logoImageResult.secure_url,
-            bannerImage: bannerImageResult.secure_url,
+            logoImage: imageUrl,
             creatorWallerAddress: verification.data.data.walletAddress,
             contractAddress,
             royalty,
             description,
             collectionCreationHash,
             nftStandard,
-            featured: true,
             isDrop,
             createdTimestamp
         };
@@ -69,12 +56,6 @@ const createCollection = async (req, res) => {
         return res.status(201).json({ status: true, message: "Collection created successfully", data: obj });
     } catch (error) {
         console.log(error);
-        if (field1 && field1[0]) {
-            await removeUnwantedCollectionImg(field1[0].filename);
-        }
-        if (field2 && field2[0]) {
-            await removeUnwantedCollectionImg(field2[0].filename);
-        }
         return res.status(500).json({ status: false, message: "Internal Server Error" });
     }
 }
