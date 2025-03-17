@@ -12,7 +12,6 @@ const sellSchema = new mongoose.Schema({
     collectionName: { type: String },
     contractAddress: { type: String, required: true },
     transactionHash: { type: String, required: true },
-    // buyerAddress: { type: String },
     price: { type: Number },
     ownedBy: { type: String },
     isMinted: { type: Boolean, default: false },

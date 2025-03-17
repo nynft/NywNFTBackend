@@ -1,5 +1,5 @@
 const NFT = require('../models/nft');
-const BuyingHistory = require('../models/buyhistory');
+const AuctionHistory = require('../models/auctionHistory');
 const { verifyToken } = require('../services/tokenServices');
 const Auction = require('../models/auction');
 
@@ -18,7 +18,7 @@ const auctionCreated = async (req, res) => {
             return res.status(400).json({ status: false, message: 'All fields are requied' });
         }
 
-        const nft = await NFT.findOne({ tokenId });
+        const nft = await NFT.findOne({ tokenId, contractAddress });
         if (!nft) {
             return res.status(404).json({ status: false, message: "Token not found" });
         }
@@ -53,23 +53,42 @@ const auctionCreated = async (req, res) => {
     }
 }
 
-// get all auction
 const getAllAuction = async (req, res) => {
     try {
-        const auction = await Auction.find({});
-        return res.status(200).json({ status: true, message: "Get all auction", data: auction });
+        // Fetch all auctions
+        const auctions = await Auction.find({});
+
+        // Get the current date and time
+        const now = new Date();
+
+        // Prepare an array to hold promises for updating expired auctions
+        const updatePromises = auctions.map(async (auction) => {
+            // Check if the auction has ended
+            if (new Date(auction.endTime) < now) {
+                // Update the auction status to "expired"
+                auction.auctionStatus = "ended";
+                await auction.save(); // Save the updated auction
+            }
+            return auction; // Return the auction (updated or not)
+        });
+
+        // Wait for all updates to complete
+        const updatedAuctions = await Promise.all(updatePromises);
+
+        // Return the updated list of auctions
+        return res.status(200).json({ status: true, message: "Get all auction", data: updatedAuctions });
 
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ message: "Internal Server Error" })
+        return res.status(500).json({ message: "Internal Server Error" });
     }
-}
+};
 
 // get auction by id
 const getAuctionById = async (req, res) => {
     try {
-        const { auctionId } = req.params;
-        const auction = await Auction.findOne({ auctionId });
+        const { auctionId, contractAddress } = req.params;
+        const auction = await Auction.findOne({ auctionId, contractAddress });
         if (!auction) {
             return res.status(404).json({ status: false, message: "Auction not found" })
         }
@@ -93,7 +112,7 @@ const placeBid = async (req, res) => {
         if (!(auctionId && amount && transactionHash && contractAddress)) {
             return res.status(400).json({ message: "All fields are required" });
         }
-        const auction = await Auction.findOne({ auctionId });
+        const auction = await Auction.findOne({ auctionId, contractAddress });
         if (!auction) {
             return res.status(404).json({ status: false, message: "Auction not found" })
         }
@@ -102,17 +121,24 @@ const placeBid = async (req, res) => {
             return res.status(400).json({ message: "Bid amount should be greater than the start amount" })
         }
 
-        await Auction.updateOne({ auctionId }, {
-            $set: {
-                amount: amount,
-                bidderAddress: walletAddress,
-                contractAddress,
-                transactionHash
-            }
-        })
+        if (auction.auctionStatus === 'active') {
+            await Auction.updateOne(
+                { auctionId, contractAddress },
+                {
+                    $push: {
+                        bids: {
+                            bidderAddress: walletAddress,
+                            amount: amount,
+                            transactionHash: transactionHash
+                        }
+                    }
+                }
+            );
 
-        return res.status(200).json({ status: true, message: 'Bid placed successfully' });
-
+            return res.status(200).json({ status: true, message: 'Bid placed successfully' });
+        } else {
+            return res.status(400).json({ status: false, message: 'Auction is not active' });
+        }
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Internal server error" });
@@ -132,7 +158,7 @@ const auctionSettled = async (req, res) => {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
 
-        const auction = await Auction.findById(auctionId);
+        const auction = await Auction.findOne({ auctionId, contractAddress });
         if (!auction) {
             return res.status(404).json({ status: false, message: "Auction not found" })
         }
@@ -141,25 +167,24 @@ const auctionSettled = async (req, res) => {
             return res.status(400).json({ status: false, message: "Auction already settled" })
         }
 
-        await Auction.updateOne({ auctionId }, {
+        await Auction.updateOne({ auctionId, contractAddress }, {
             $set: {
                 auctionStatus: auctionStatus,
-                amount: amount,
+                winnerAmount: amount,// update the winner amount
                 ownedBy: walletAddress,
+                transactionHash: transactionHash
             }
         })
-
-
-        // Record buying history
-        // await BuyingHistory.create({
-        //     tokenId: nft.tokenId,
-        //     buyerAddress: buyer.walletAddress,
-        //     buyDate: Date.now(),
-        //     price: bid[0].amount,
-        //     sellerAddress: seller.walletAddress,
-        //     contractAddress: nft.contractAddress,
-        //     transactionHash: transactionHash
-        // });
+        const newObj = {
+            auctionId: auctionId,
+            tokenId: tokenId,
+            auctionOwnerAddress: auction.walletAddress,
+            auctionWinnerAddress: walletAddress,
+            transactionHash: transactionHash,
+            contractAddress: contractAddress,
+            winnerAmount: amount,
+        }
+        await AuctionHistory.create(newObj)
 
 
         return res.status(200).json({
@@ -181,8 +206,8 @@ const cancelAuction = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const { auctionId, transactionHash } = req.body;
-        const auction = await Auction.findOne({ auctionId });
+        const { auctionId, transactionHash, contractAddress } = req.body;
+        const auction = await Auction.findOne({ auctionId, contractAddress });
         if (!auction) {
             return res.status(404).json({ status: false, message: "Auction not found" })
         }
@@ -193,7 +218,7 @@ const cancelAuction = async (req, res) => {
             return res.status(403).json({ status: false, message: "You are not the owner of this auction" })
         }
         // Update auction status to cancelled
-        await Auction.updateOne({ auctionId }, {
+        await Auction.updateOne({ auctionId, contractAddress }, {
             $set: {
                 auctionStatus: 'cancelled',
                 transactionHash: transactionHash
@@ -215,11 +240,11 @@ const extendAuction = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const { auctionId, endTime, transactionHash } = req.body;
+        const { auctionId, endTime, transactionHash, contractAddress } = req.body;
         if (!(auctionId && transactionHash && endTime)) {
             return res.status(400).json({ status: false, message: "All fields are required" })
         }
-        const auction = await Auction.findOne({ auctionId });
+        const auction = await Auction.findOne({ auctionId, contractAddress });
         if (!auction) {
             return res.status(404).json({ status: false, message: "Auction not found" })
         }
@@ -230,9 +255,9 @@ const extendAuction = async (req, res) => {
             return res.status(403).json({ status: false, message: "You are not the owner of this auction" })
         }
         // Update auction status to extended
-        await Auction.updateOne({ auctionId }, {
+        await Auction.updateOne({ auctionId, contractAddress }, {
             $set: {
-                // auctionStatus: 'extended',
+                auctionStatus: 'extended',
                 transactionHash: transactionHash,
                 endTime: endTime
             }

@@ -14,15 +14,10 @@ const nftSchema = new mongoose.Schema({
     transactionHash: { type: String, required: true },
     buyerAddress: { type: String },
     price: { type: Number },
-    // royalty: {
-    //     percentage: { type: Number, min: 0, max: 10 },
-    //     recipient: { type: String }, // Wallet address receiving royalties
-    // },
     ownedBy: { type: String },
     isMinted: { type: Boolean, default: false },
     onSale: { type: Boolean, default: false },
     buyDate: { type: Date },
-    // sellExpiry: { type: Date },
     metadataURL: { type: String },
     ipfsImageUrl: { type: String },
     quantity: { type: Number, required: true }
