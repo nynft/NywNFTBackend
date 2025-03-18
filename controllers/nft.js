@@ -475,16 +475,26 @@ const getOwnedNft = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const nft = await NFT.find({ ownedBy: walletAddress, isMinted: true });
+        // Fetch both collections in parallel
+        const [sellNft, nft] = await Promise.all([
+            SELLNFT.find({ ownedBy: walletAddress, isMinted: true }),
+            NFT.find({ ownedBy: walletAddress, isMinted: true }),
+        ]);
 
-        if (!nft || nft.length === 0) {
+        // Combine results
+        const result = [...sellNft, ...nft];
+        // console.log(sellNft, "res");
+
+
+        // If no NFTs are found, return a 404 response
+        if (result.length === 0) {
             return res.status(404).json({ status: false, message: "No owned NFTs found" });
         }
 
         return res.status(200).json({
             status: true,
             message: "Owned NFTs retrieved successfully",
-            data: nft,
+            data: result,
         });
     } catch (error) {
         console.log(error);
