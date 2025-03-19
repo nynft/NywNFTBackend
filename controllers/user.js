@@ -261,10 +261,8 @@ const verifyEmail = async (req, res) => {
     if (!user) {
       return res.status(401).json({ status: false, message: "Invalid token" })
     }
-    return res.status(200).json({
-      status: true,
-      message: "Your email is verified"
-    })
+
+    return res.redirect('https://nywnft.com/');
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "Internal Server Error" })

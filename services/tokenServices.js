@@ -8,7 +8,7 @@ const createToken = async (req, res, data) => {
         // Check if token already exists for the user
         const existingToken = await UserToken.findOne({ userId: data.userId });
 
-        const expireInOneDay = 3600 * 120; // 24 hours in seconds
+        const expireInOneDay = 2592000; // 24 hours in seconds
         const token = jwt.sign({ data: data }, process.env.SECRET_KEY, { expiresIn: expireInOneDay });
 
         if (existingToken) {
