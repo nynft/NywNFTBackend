@@ -12,6 +12,7 @@ const categoryRoute = require('./routes/category');
 const collectionRoutes = require('./routes/collection');
 const auctionRoutes = require('./routes/auction');
 const nftRoutes = require('./routes/nft');
+const adminRoutes = require('./routes/admin');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -30,6 +31,7 @@ app.use('/api/category', categoryRoute);
 app.use('/api/collection', collectionRoutes);
 app.use('/api/auction', auctionRoutes);
 app.use('/api/nft', nftRoutes);
+app.use('/api/admin', adminRoutes);
 
 
 app.get("/api/image", (req, res) => {
