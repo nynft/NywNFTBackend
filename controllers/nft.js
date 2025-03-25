@@ -552,4 +552,23 @@ const getOnSaleNft = async (req, res) => {
     }
 };
 
-module.exports = { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale, getOwnedNft, getCreatedNft, getOnSaleNft };
+
+const getAllCreateNft = async (req, res) => {
+    try {
+        const nfts = await NFT.find({});
+        if (!nfts || nfts.length === 0) {
+            return res.status(404).json({ status: false, message: "No NFT found" });
+        }
+        return res.status(200).json({
+            status: true,
+            message: "NFTs retrieved successfully",
+            data: nfts,
+        })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+}
+
+module.exports = { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale, getOwnedNft, getCreatedNft, getOnSaleNft, getAllCreateNft };
