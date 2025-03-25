@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { uploadNFTImg } = require('../middlewares/fileUpload');
-const { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale, getOwnedNft, getCreatedNft, getOnSaleNft } = require('../controllers/nft');
+const { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale, getOwnedNft, getCreatedNft, getOnSaleNft, getAllCreateNft } = require('../controllers/nft');
 
 router.post('/create', uploadNFTImg, createNFT);
 router.get('/get', getNFTs);
@@ -12,6 +12,7 @@ router.post('/buy', buyNFT);
 router.get('/owned', getOwnedNft);
 router.get('/get-created', getCreatedNft);
 router.get('/get-on-sale', getOnSaleNft);
+router.get('/get-all-created', getAllCreateNft);
 
 
 
