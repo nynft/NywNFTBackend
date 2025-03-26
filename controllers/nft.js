@@ -132,22 +132,11 @@ const createNFT = async (req, res) => {
 
 const getNFTs = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1; // Ensure page is an integer
-        const perPage = 20;
-        const skip = (page - 1) * perPage;
-
-        const nfts = await SELLNFT.find({}).sort({ _id: 1 }).skip(skip).limit(perPage);
-        const totalNFTs = await SELLNFT.countDocuments(); // Get total count for pagination
-
+        const nfts = await SELLNFT.find({}).sort({ _id: 1 })
         return res.status(200).json({
             status: true,
             message: "Get all NFTs for sell",
             data: nfts,
-            pagination: {
-                currentPage: page,
-                totalPages: Math.ceil(totalNFTs / perPage),
-                totalItems: totalNFTs,
-            },
         });
     } catch (error) {
         console.log(error);
