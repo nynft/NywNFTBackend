@@ -257,20 +257,27 @@ const buyNFT = async (req, res) => {
         if (quantity > nft.quantity) {
             return res.status(400).json({ status: false, message: "Requested quantity exceeds available NFT quantity" });
         }
+        const nftData = await NFT.findOne({tokenId, contractAddress});
+        const nftQuantity = nftData.quantity;
+        let saleStatus;
+        if(nftQuantity==0){
+            saleStatus= false;
+        }
+
 
         const updateNFT = await SELLNFT.findOneAndUpdate(
             { tokenId, contractAddress },
             {
                 $set: {
                     isMinted,
-                    onSale: false,
+                    onSale: saleStatus,
                     ownedBy: walletAddress,
                     transactionHash: transactionHash,
                     contractAddress: contractAddress,
                     price,
                     buyDate: Date.now(),
                 },
-                // $inc: { quantity: -quantity },
+                $inc: { quantity: -quantity },
             }
         );
         if (!updateNFT) {
@@ -288,7 +295,7 @@ const buyNFT = async (req, res) => {
             buyDate: Date.now(),
         };
         await BuyingHistory.create(newObj);
-        await NFT.updateOne({ tokenId, contractAddress }, { $set: { onSale: false } });
+        await NFT.updateOne({ tokenId, contractAddress }, { $set: { onSale: saleStatus } });
         return res.status(200).json({ status: true, message: "NFT bought successfully" });
     } catch (error) {
         console.log(error);
@@ -387,6 +394,8 @@ const listNFTForSale = async (req, res) => {
             },
             { new: true }
         );
+
+
         // console.log(updatedNFT)
 
         return res.status(200).json({
