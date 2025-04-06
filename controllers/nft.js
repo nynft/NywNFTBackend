@@ -218,13 +218,20 @@ const buyNFT = async (req, res) => {
         if (quantity > nft.quantity) {
             return res.status(400).json({ status: false, message: "Requested quantity exceeds available NFT quantity" });
         }
+        const nftData = await NFT.findOne({ tokenId, contractAddress });
+        const nftQuantity = nftData.quantity;
+        let saleStatus;
+        if (nftQuantity == 0) {
+            saleStatus = false;
+        }
+
 
         const updateNFT = await SELLNFT.findOneAndUpdate(
             { tokenId, contractAddress },
             {
                 $set: {
                     isMinted,
-                    onSale: false,
+                    onSale: saleStatus,
                     ownedBy: walletAddress,
                     transactionHash: transactionHash,
                     contractAddress: contractAddress,
@@ -232,7 +239,7 @@ const buyNFT = async (req, res) => {
                     price,
                     buyDate: Date.now(),
                 },
-                // $inc: { quantity: -quantity },
+                $inc: { quantity: -quantity },
             }
         );
         if (!updateNFT) {
