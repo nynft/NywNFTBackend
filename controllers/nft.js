@@ -132,7 +132,12 @@ const createNFT = async (req, res) => {
 
 const getNFTs = async (req, res) => {
     try {
-        const nfts = await SELLNFT.find({}).sort({ _id: 1 })
+        const [sellNft, nft] = await Promise.all([
+            SELLNFT.find({}),
+            NFT.find({}),
+        ]);
+
+        let nfts = [...sellNft, ...nft];
         return res.status(200).json({
             status: true,
             message: "Get all NFTs for sell",
@@ -143,50 +148,6 @@ const getNFTs = async (req, res) => {
         return res.status(500).json({ message: "Internal server error" });
     }
 };
-
-// const getNftById = async (req, res) => {
-//     try {
-//         const { tokenId, contractAddress } = req.query;
-//         const nft = await SELLNFT.findOne({ tokenId, contractAddress });
-//         if (!nft) {
-//             return res.status(404).json({ status: false, message: "NFT not found" });
-//         }
-
-//         const wallet = nft.ownedBy;
-
-//         //owner profile 
-//         const ownerProfile = await NFT.findOne({ walletAddress: wallet });
-//         console.log(ownerProfile, "prof");
-
-//         const walletAddress = ownerProfile?.ownedBy;
-//         const profile = ownerProfile?.profileLogo;
-//         const userNameOfOwner = ownerProfile?.username;
-
-//         // creator wallet profile
-//         const creatorProfile = await COLLECTION.findOne({ creatorWallerAddress: wallet })
-
-//         const creatorProfileWallet = creatorProfile?.creatorWallerAddress
-//         const creatorProfileImage = creatorProfile?.logoImage
-//         const userNameOfCreator = ownerProfile?.username;
-
-
-
-//         return res.status(200).json({
-//             status: true,
-//             message: "Get nft by id",
-//             data: nft,
-//             ownerName: userNameOfOwner,
-//             ownerWallet: walletAddress,
-//             ownerWalletProfile: profile,
-//             creatorname: userNameOfCreator,
-//             creatorProfileWallet: creatorProfileWallet,
-//             creatorProfileIMG: creatorProfileImage,
-//         });
-//     } catch (error) {
-//         console.log(error);
-//         return res.status(500).json({ message: "Internal server error" });
-//     }
-// };
 
 
 const getNftById = async (req, res) => {
@@ -248,7 +209,7 @@ const buyNFT = async (req, res) => {
         if (!nft) {
             return res.status(404).json({ status: false, message: "NFT not found" })
         }
-
+        const userNft = await NFT.findOne({ tokenId, contractAddress });
 
         if (price < nft.price) {
             return res.status(400).json({ status: false, message: "Price cannot be lessthan price" });
@@ -267,6 +228,7 @@ const buyNFT = async (req, res) => {
                     ownedBy: walletAddress,
                     transactionHash: transactionHash,
                     contractAddress: contractAddress,
+                    quantity: quantity,
                     price,
                     buyDate: Date.now(),
                 },
@@ -288,7 +250,14 @@ const buyNFT = async (req, res) => {
             buyDate: Date.now(),
         };
         await BuyingHistory.create(newObj);
-        await NFT.updateOne({ tokenId, contractAddress }, { $set: { onSale: false } });
+        await NFT.updateOne({ tokenId, contractAddress },
+            {
+                $set: {
+                    price: nft.price,
+                    onSale: userNft.quantity - quantity > 0 ? true : false,
+                },
+                $inc: { quantity: -quantity },
+            });
         return res.status(200).json({ status: true, message: "NFT bought successfully" });
     } catch (error) {
         console.log(error);
@@ -378,16 +347,23 @@ const listNFTForSale = async (req, res) => {
         );
 
         // Update the NFT's onSale status and quantity
-        await NFT.findOneAndUpdate(
-            { tokenId: tokenId, contractAddress },
+        // await NFT.findOneAndUpdate(
+        //     { tokenId: tokenId, contractAddress },
+        //     {
+        //         $set: { onSale: true }, // Set onSale to true
+        //         $inc: { quantity: -quantity }, // Decrease the quantity
+        //     },
+        //     { new: true }
+        // );
 
-            {
-                $set: { onSale: true },
-                $inc: { quantity: -quantity },
-            },
-            { new: true }
-        );
-        // console.log(updatedNFT)
+        // // Check if the NFT quantity is now zero
+        // if (nft.quantity - quantity <= 0) {
+        //     // If quantity is zero, set onSale to false
+        //     await NFT.findOneAndUpdate(
+        //         { tokenId, contractAddress },
+        //         { $set: { onSale: false } }
+        //     );
+        // }
 
         return res.status(200).json({
             status: true,
