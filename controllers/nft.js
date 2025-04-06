@@ -200,52 +200,57 @@ const buyNFT = async (req, res) => {
             return res.status(401).json({ status: false, message: verification.message });
         }
         const walletAddress = verification.data.data.walletAddress;
-        const { tokenId, isMinted, transactionHash, quantity, contractAddress, price, } = req.body;
+        const { tokenId, isMinted, transactionHash, quantity, contractAddress, price } = req.body;
 
-        if (!(tokenId && isMinted && transactionHash)) {
+        if (!(tokenId && isMinted && transactionHash && quantity)) {
             return res.status(400).json({ status: false, message: "All fields are required" });
         }
+
         const nft = await SELLNFT.findOne({ tokenId, contractAddress });
         if (!nft) {
-            return res.status(404).json({ status: false, message: "NFT not found" })
+            return res.status(404).json({ status: false, message: "NFT not found" });
         }
+
         const userNft = await NFT.findOne({ tokenId, contractAddress });
-
-        if (price < nft.price) {
-            return res.status(400).json({ status: false, message: "Price cannot be lessthan price" });
+        if (!userNft) {
+            return res.status(404).json({ status: false, message: "User  NFT not found" });
         }
 
+        // Ensure the price is not less than the NFT's price
+        if (price < nft.price) {
+            return res.status(400).json({ status: false, message: "Price cannot be less than the NFT's price" });
+        }
+
+        // Check if requested quantity exceeds available NFT quantity
         if (quantity > nft.quantity) {
             return res.status(400).json({ status: false, message: "Requested quantity exceeds available NFT quantity" });
         }
-        const nftData = await NFT.findOne({ tokenId, contractAddress });
-        const nftQuantity = nftData.quantity;
-        let saleStatus;
-        if (nftQuantity == 0) {
-            saleStatus = false;
-        }
 
+        // Calculate remaining quantity after purchase
+        const remainingQuantity = userNft.quantity - quantity;
+        const onSaleStatus = remainingQuantity > 0;
 
+        // Update the SELLNFT collection
         const updateNFT = await SELLNFT.findOneAndUpdate(
             { tokenId, contractAddress },
             {
                 $set: {
                     isMinted,
-                    onSale: saleStatus,
+                    onSale: onSaleStatus,
                     ownedBy: walletAddress,
                     transactionHash: transactionHash,
-                    contractAddress: contractAddress,
-                    quantity: quantity,
                     price,
                     buyDate: Date.now(),
                 },
-                $inc: { quantity: -quantity },
+                // $inc: { quantity: -quantity },
             }
         );
+
         if (!updateNFT) {
             return res.status(404).json({ status: false, message: "NFT not found" });
         }
 
+        // Create a new entry in BuyingHistory
         const newObj = {
             tokenId: nft.tokenId,
             buyerAddress: walletAddress,
@@ -257,21 +262,25 @@ const buyNFT = async (req, res) => {
             buyDate: Date.now(),
         };
         await BuyingHistory.create(newObj);
-        await NFT.updateOne({ tokenId, contractAddress },
+
+        // Update the NFT collection
+        await NFT.updateOne(
+            { tokenId, contractAddress },
             {
                 $set: {
                     price: nft.price,
-                    onSale: userNft.quantity - quantity > 0 ? true : false,
+                    onSale: onSaleStatus,
                 },
                 $inc: { quantity: -quantity },
-            });
+            }
+        );
+
         return res.status(200).json({ status: true, message: "NFT bought successfully" });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: "Internal server error" });
     }
 };
-
 const listNFTForSale = async (req, res) => {
     try {
         const verification = await verifyToken(req);
@@ -543,4 +552,27 @@ const getAllCreateNft = async (req, res) => {
     }
 }
 
-module.exports = { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale, getOwnedNft, getCreatedNft, getOnSaleNft, getAllCreateNft };
+
+const buyingHistoryForUser = async (req, res) => {
+    try {
+        const verification = await verifyToken(req, res);
+        if (!verification.isVerified) {
+            return res.status(401).json({ status: false, message: verification.message });
+        }
+        const walletAddress = verification.data.data.walletAddress;
+        const buyHistory = await BuyingHistory.find({ buyerAddress: walletAddress });
+        if (!buyHistory || buyHistory.length === 0) {
+            return res.status(404).json({ status: false, message: "No buying history found" });
+        }
+        return res.status(200).json({
+            status: true,
+            message: "Buying history retrieved successfully",
+            data: buyHistory,
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+module.exports = { createNFT, getNFTs, getNftById, buyNFT, listNFTForSale, removeNFTFromSale, getOwnedNft, getCreatedNft, getOnSaleNft, getAllCreateNft, buyingHistoryForUser };
